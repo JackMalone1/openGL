@@ -7,39 +7,18 @@
 #include <string>
 #include <sstream>
 
-#define ASSERT(x) if(!(x)) __debugbreak();
-#define GLCall(x) GLClearError();\
-		x;\
-		ASSERT(GLLogCall(#x, __FILE__, __LINE__))
+#include "Renderer.h"
 
+#include "VertexBuffer.h"
+#include "IndexBuffer.h"
 
-static void GLClearError()
-{
-
-	while (glGetError() != GL_NO_ERROR)
-	{
-
-	}
-}
-
-static bool GLLogCall(const char* function, const char* file, int line)
-{
-	while (GLenum error = glGetError())
-	{
-		std::cout << "[Open GL error] (" << error << ")" << function 
-			<< " " << file << " line:" << line << std::endl;
-		return false;
-	}
-	return true;
-}
-
-struct programShaderSource
+struct shaderProgramSource
 {
 	std::string vertexSource;
 	std::string fragmantSource;
 };
 
-static programShaderSource parseShader(const std::string& filepath)
+static shaderProgramSource parseShader(const std::string& filepath)
 {
 	std::ifstream stream(filepath);
 
@@ -136,7 +115,10 @@ int main(void)
 	{
 		return -1;
 	}
-	
+
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	/* Create a windowed mode window and its OpenGL context */
 	window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
@@ -156,93 +138,103 @@ int main(void)
 	}
 
 	std::cout << glGetString(GL_VERSION) << std::endl;
-
-	float positions[] = { 
-		-0.5f,-0.5f,
-		0.5f,-0.5f,
-		0.5f,0.5f,
-		-0.5f,0.5f,
-	};
-
-	unsigned int indices[] = {
-		0,1,2,
-		2,3,0
-	};
-
-	unsigned int buffer;
-	GLCall(glGenBuffers(1,&buffer));
-	GLCall(glBindBuffer(GL_ARRAY_BUFFER, buffer));
-	GLCall(glBufferData(GL_ARRAY_BUFFER, 6 * 2 * sizeof(float), positions, GL_STATIC_DRAW));
-
-	GLCall(glEnableVertexAttribArray(0));
-	GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));
-
-	unsigned int indexedBufferObject;
-	GLCall(glGenBuffers(1, &indexedBufferObject));
-	GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexedBufferObject));
-	GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 *  sizeof(unsigned int), indices, GL_STATIC_DRAW));
-
-	programShaderSource source = parseShader("res/shaders/Basic.shader");
-
-	unsigned int shader = createShader(source.vertexSource,source.fragmantSource);
-	GLCall(glUseProgram(shader));
-
-	GLCall(int location = glGetUniformLocation(shader, "u_Colour"));//gets the location of the uniform so it can be set
-	ASSERT(location != -1);//if it wasn't able to find the location of the uniform or not
-	GLCall(glUniform4f(location,0.2f,0.3f,0.8f,1.0f));//sets the uniform to the draw has to be done every draw
-
-	float r = 0.0f;
-	float g = 0.3f;
-	float b = 0.8f;
-	float increment = 0.05f;
-	float incrementG = 0.05f;
-	float incrementB = 0.05f;
-	/* Loop until the user closes the window */
-	while (!glfwWindowShouldClose(window))
 	{
-		/* Render here */
-		GLCall(glClear(GL_COLOR_BUFFER_BIT));
+		float positions[] = {
+			-0.5f,-0.5f,
+			0.5f,-0.5f,
+			0.5f,0.5f,
+			-0.5f,0.5f,
+		};
 
-		GLCall(glUniform4f(location, r, g, b, 1.0f));//sets the uniform to the draw has to be done every draw
-		GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
-		/* Swap front and back buffers */
-		glfwSwapBuffers(window);
+		unsigned int indices[] = {
+			0,1,2,
+			2,3,0
+		};
 
-		if (r > 1.0f)
+		unsigned int vao;
+		GLCall(glGenVertexArrays(1, &vao));
+		GLCall(glBindVertexArray(vao));
+
+		VertexBuffer vb(positions, 4 * 2 * sizeof(float));
+
+		GLCall(glEnableVertexAttribArray(0));
+		GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));
+
+		IndexBuffer indexedBufferObject(indices, 6);
+
+		shaderProgramSource source = parseShader("res/shaders/Basic.shader");
+
+		unsigned int shader = createShader(source.vertexSource, source.fragmantSource);
+		GLCall(glUseProgram(shader));
+
+		GLCall(int location = glGetUniformLocation(shader, "u_Colour"));//gets the location of the uniform so it can be set
+		ASSERT(location != -1);//if it wasn't able to find the location of the uniform or not
+		GLCall(glUniform4f(location, 0.2f, 0.3f, 0.8f, 1.0f));//sets the uniform to the draw has to be done every draw
+
+		GLCall(glBindVertexArray(0));
+		GLCall(glUseProgram(0));
+		GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
+		GLCall(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+		float r = 0.0f;
+		float g = 0.3f;
+		float b = 0.8f;
+
+		float increment = 0.05f;
+		float incrementG = 0.05f;
+		float incrementB = 0.05f;
+
+		/* Loop until the user closes the window */
+		while (!glfwWindowShouldClose(window))
 		{
-			increment = -0.05f;
-		}
-		else if (r < 0.0f)
-		{
-			increment = 0.05f;
+			/* Render here */
+			GLCall(glClear(GL_COLOR_BUFFER_BIT));
+
+			GLCall(glUseProgram(shader));
+			GLCall(glUniform4f(location, r, g, b, 1.0f));//sets the uniform to the draw has to be done every draw
+
+			GLCall(glBindVertexArray(vao));
+			indexedBufferObject.bind();
+
+			GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
+			/* Swap front and back buffers */
+			glfwSwapBuffers(window);
+
+			if (r > 1.0f)
+			{
+				increment = -0.05f;
+			}
+			else if (r < 0.0f)
+			{
+				increment = 0.05f;
+			}
+
+			if (g > 1.0f)
+			{
+				incrementG = -0.05f;
+			}
+			else if (g < 0.0f)
+			{
+				incrementG = 0.05f;
+			}
+
+			if (b > 1.0f)
+			{
+				incrementB = -0.05f;
+			}
+			else if (b < 0.0f)
+			{
+				incrementB = 0.05f;
+			}
+			r += increment;
+			g += incrementG;
+			b += incrementB;
+			/* Poll for and process events */
+			glfwPollEvents();
 		}
 
-		if (g > 1.0f)
-		{
-			incrementG = -0.05f;
-		}
-		else if (g < 0.0f)
-		{
-			incrementG = 0.05f;
-		}
-
-		if (b > 1.0f)
-		{
-			incrementB = -0.05f;
-		}
-		else if (b < 0.0f)
-		{
-			incrementB = 0.05f;
-		}
-		r += increment;
-		g += incrementG;
-		b += incrementB;
-		/* Poll for and process events */
-		glfwPollEvents();
+		GLCall(glDeleteProgram(shader));
 	}
-
-	GLCall(glDeleteProgram(shader));
-
 	glfwTerminate();
 	return 0;
 }
