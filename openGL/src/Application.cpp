@@ -148,6 +148,7 @@ int main(void)
 
 	/* Make the window's context current */
 	glfwMakeContextCurrent(window);
+	glfwSwapInterval(1);//sets a fram rate limit
 
 	if (glewInit() != GLEW_OK)
 	{
@@ -186,16 +187,56 @@ int main(void)
 	unsigned int shader = createShader(source.vertexSource,source.fragmantSource);
 	GLCall(glUseProgram(shader));
 
+	GLCall(int location = glGetUniformLocation(shader, "u_Colour"));//gets the location of the uniform so it can be set
+	ASSERT(location != -1);//if it wasn't able to find the location of the uniform or not
+	GLCall(glUniform4f(location,0.2f,0.3f,0.8f,1.0f));//sets the uniform to the draw has to be done every draw
+
+	float r = 0.0f;
+	float g = 0.3f;
+	float b = 0.8f;
+	float increment = 0.05f;
+	float incrementG = 0.05f;
+	float incrementB = 0.05f;
 	/* Loop until the user closes the window */
 	while (!glfwWindowShouldClose(window))
 	{
 		/* Render here */
 		GLCall(glClear(GL_COLOR_BUFFER_BIT));
 
+		GLCall(glUniform4f(location, r, g, b, 1.0f));//sets the uniform to the draw has to be done every draw
 		GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
 		/* Swap front and back buffers */
 		glfwSwapBuffers(window);
 
+		if (r > 1.0f)
+		{
+			increment = -0.05f;
+		}
+		else if (r < 0.0f)
+		{
+			increment = 0.05f;
+		}
+
+		if (g > 1.0f)
+		{
+			incrementG = -0.05f;
+		}
+		else if (g < 0.0f)
+		{
+			incrementG = 0.05f;
+		}
+
+		if (b > 1.0f)
+		{
+			incrementB = -0.05f;
+		}
+		else if (b < 0.0f)
+		{
+			incrementB = 0.05f;
+		}
+		r += increment;
+		g += incrementG;
+		b += incrementB;
 		/* Poll for and process events */
 		glfwPollEvents();
 	}
