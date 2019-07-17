@@ -16,6 +16,8 @@
 
 #include "Shader.h"
 
+#include "VertexBufferLayout.h"
+
 int main(void)
 {
 	GLFWwindow* window;
@@ -80,6 +82,8 @@ int main(void)
 		vb.unBind();
 		indexedBufferObject.unBind();
 
+		Renderer renderer;
+
 		float r = 0.0f;
 		float g = 0.3f;
 		float b = 0.8f;
@@ -92,16 +96,13 @@ int main(void)
 		while (!glfwWindowShouldClose(window))
 		{
 			/* Render here */
-			GLCall(glClear(GL_COLOR_BUFFER_BIT));
+			renderer.Clear();
 
 			shader.Bind();
 			shader.SetUniform4f("u_Colour", r, g, b, 1.0f);
 			
-
-			va.Bind();
-			indexedBufferObject.bind();
-
-			GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
+			renderer.Draw(va,indexedBufferObject,shader);
+			
 			/* Swap front and back buffers */
 			glfwSwapBuffers(window);
 
