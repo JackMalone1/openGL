@@ -18,6 +18,8 @@
 
 #include "VertexBufferLayout.h"
 
+#include "Texture.h"
+
 int main(void)
 {
 	GLFWwindow* window;
@@ -52,10 +54,10 @@ int main(void)
 	std::cout << glGetString(GL_VERSION) << std::endl;
 	{
 		float positions[] = {
-			-0.5f,-0.5f,
-			0.5f,-0.5f,
-			0.5f,0.5f,
-			-0.5f,0.5f,
+			-0.5f,-0.5f, 0.0f, 0.0f,
+			0.5f,-0.5f, 1.0f, 0.0f,
+			0.5f,0.5f, 1.0f, 1.0f
+			-0.5f,0.5f, 0.0f, 1.0f
 		};
 
 		unsigned int indices[] = {
@@ -63,11 +65,18 @@ int main(void)
 			2,3,0
 		};
 
+		GLCall(glEnable(GL_BLEND));
+		GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA));
+		
+		int floatPerVertex = 4;
+		int vertexCount = 4;
+
 		VertexArray va;
-		VertexBuffer vb(positions, 4 * 2 * sizeof(float));
+		VertexBuffer vb(positions, vertexCount * floatPerVertex * sizeof(float));
 		
 
 		VertexBufferLayout layout;
+		layout.Push<float>(2);
 		layout.Push<float>(2);
 		va.AddBuffer(vb, layout);
 
@@ -76,6 +85,10 @@ int main(void)
 		Shader shader("res/shaders/Basic.shader");
 		shader.Bind();
 		shader.SetUniform4f("u_Colour", 0.2f, 0.3f, 0.8f, 1.0f);
+
+		Texture texture("res/textures/chernologo.png");
+		texture.Bind();
+		shader.SetUniform1i("u_Texture", 0);
 
 		va.Unbind();
 		shader.Unbind();
